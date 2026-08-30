@@ -46,6 +46,20 @@
       font-weight: bold;
     }
 
+    .event-day {
+      background-color: #fff;
+      color: var(--accent-color);
+      border: 1.5px solid var(--accent-color);
+      border-radius: 50%;
+      font-weight: bold;
+    }
+
+    .event-day-dot {
+      background-color: #fff;
+      border: 1.5px solid var(--accent-color);
+      border-radius: 50%;
+    }
+
     .nav-btn {
       position: relative;
       padding: 12px 8px;
@@ -436,22 +450,29 @@
 
     <div class="calendar-module">
       <div class="flex justify-between items-center mb-4">
-        <span class="text-xs font-bold tracking-widest uppercase">2026.08</span>
+        <span class="text-xs font-bold tracking-widest uppercase">2026.09</span>
       </div>
-      <div id="calendar-days-08" class="grid grid-cols-7 text-[11px] text-center gap-y-3">
+      <div id="calendar-days-09" class="grid grid-cols-7 text-[11px] text-center gap-y-3">
         <div class="text-[9px] text-gray-400 font-bold">S</div><div class="text-[9px] text-gray-400 font-bold">M</div>
         <div class="text-[9px] text-gray-400 font-bold">T</div><div class="text-[9px] text-gray-400 font-bold">W</div>
         <div class="text-[9px] text-gray-400 font-bold">T</div><div class="text-[9px] text-gray-400 font-bold">F</div>
         <div class="text-[9px] text-gray-400 font-bold">S</div>
       </div>
       <div class="mt-4 space-y-1">
-        <div class="text-[9px] text-stone-400 tracking-wide">毎週火曜日 営業</div>
+        <div class="text-[9px] text-stone-400 tracking-wide">毎週火曜日 営業（9/22は休業）</div>
+        <div class="text-[9px] text-stone-400 tracking-wide">9/5 剪定ワークショップ・9/27 DIYワークショップ</div>
       </div>
     </div>
 
-    <div class="mt-8 flex items-center gap-3">
-      <div class="w-2 h-2 open-day"></div>
-      <span class="text-[9px] tracking-widest text-gray-400 uppercase">Open Every Tue.</span>
+    <div class="mt-8 space-y-2">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 open-day"></div>
+        <span class="text-[9px] tracking-widest text-gray-400 uppercase">Open Every Tue.</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 event-day-dot"></div>
+        <span class="text-[9px] tracking-widest text-gray-400 uppercase">Workshop Day</span>
+      </div>
     </div>
 
     <div class="mt-auto pt-8">
@@ -528,25 +549,32 @@
               <p class="text-[10px] tracking-[0.35em] uppercase text-stone-400 mb-2">Calendar</p>
               <h3 class="text-xl font-light tracking-widest text-stone-800">営業カレンダー</h3>
             </div>
-            <div class="flex items-center gap-2 text-[10px] tracking-widest text-stone-500 uppercase">
-              <div class="w-2 h-2 open-day"></div>
-              <span>Open Every Tue.</span>
+            <div class="flex flex-col items-end gap-1 text-[10px] tracking-widest text-stone-500 uppercase">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 open-day"></div>
+                <span>Open Every Tue.</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 event-day-dot"></div>
+                <span>Workshop Day</span>
+              </div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <div class="flex justify-between items-center mb-4">
-                <span class="text-xs font-bold tracking-widest uppercase">2026.08</span>
+                <span class="text-xs font-bold tracking-widest uppercase">2026.09</span>
               </div>
-              <div id="calendar-days-mobile-08" class="mobile-calendar-grid grid grid-cols-7 text-[11px] text-center gap-y-3">
+              <div id="calendar-days-mobile-09" class="mobile-calendar-grid grid grid-cols-7 text-[11px] text-center gap-y-3">
                 <div class="day-label">S</div><div class="day-label">M</div>
                 <div class="day-label">T</div><div class="day-label">W</div>
                 <div class="day-label">T</div><div class="day-label">F</div>
                 <div class="day-label">S</div>
               </div>
               <div class="mt-4 space-y-1">
-                <div class="text-[9px] text-stone-400 tracking-wide">毎週火曜日 営業</div>
+                <div class="text-[9px] text-stone-400 tracking-wide">毎週火曜日 営業（9/22は休業）</div>
+                <div class="text-[9px] text-stone-400 tracking-wide">9/5 剪定ワークショップ・9/27 DIYワークショップ</div>
               </div>
             </div>
           </div>
@@ -583,6 +611,24 @@
             <h3 class="text-xs font-bold tracking-widest uppercase mb-8 border-b pb-2">お知らせ</h3>
             <div class="space-y-8">
 
+
+              <div class="news-item">
+                <a href="javascript:void(0)" class="news-link internal-link" data-page="home" data-scroll="home-calendar-mobile">
+                  <span class="text-[10px] text-stone-400 block mb-1">2026.08.30</span>
+                  <p class="text-xs leading-relaxed">
+                    9月5日（土）に「剪定ワークショップ」を開催します。詳細は追ってお知らせいたします。
+                  </p>
+                </a>
+              </div>
+
+              <div class="news-item">
+                <a href="javascript:void(0)" class="news-link internal-link" data-page="home" data-scroll="home-calendar-mobile">
+                  <span class="text-[10px] text-stone-400 block mb-1">2026.08.30</span>
+                  <p class="text-xs leading-relaxed">
+                    9月27日（日）に「DIYワークショップ」を開催します。詳細は追ってお知らせいたします。
+                  </p>
+                </a>
+              </div>
 
               <div class="news-item">
                 <a href="javascript:void(0)" class="news-link internal-link" data-page="activity">
@@ -1310,7 +1356,7 @@
     }
   }
 
-  function renderCalendar(containerId, year, month, tuesdays) {
+  function renderCalendar(containerId, year, month, tuesdays, events = []) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -1326,7 +1372,9 @@
       dayEl.textContent = day;
       dayEl.className = tuesdays.includes(day)
         ? 'w-5 h-5 flex items-center justify-center mx-auto open-day'
-        : 'w-5 h-5 flex items-center justify-center mx-auto text-stone-300';
+        : events.includes(day)
+          ? 'w-5 h-5 flex items-center justify-center mx-auto event-day'
+          : 'w-5 h-5 flex items-center justify-center mx-auto text-stone-300';
       container.appendChild(dayEl);
     }
   }
@@ -1360,8 +1408,8 @@
       });
     });
 
-    renderCalendar('calendar-days-08', 2026, 8, [4, 11, 18, 25]);
-    renderCalendar('calendar-days-mobile-08', 2026, 8, [4, 11, 18, 25]);
+    renderCalendar('calendar-days-09', 2026, 9, [1, 8, 15, 29], [5, 27]);
+    renderCalendar('calendar-days-mobile-09', 2026, 9, [1, 8, 15, 29], [5, 27]);
 
     toggleMobileCalendar();
     window.addEventListener('resize', toggleMobileCalendar);
