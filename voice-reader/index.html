@@ -119,6 +119,12 @@
   .settings-row{display:flex; gap:10px; align-items:center;}
   .settings-row select{flex:1; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:13px; background:var(--card); color:var(--text);}
   .rate-label{font-size:12px; color:var(--sub); white-space:nowrap; width:50px;}
+  .rate-presets{display:flex; gap:6px; margin-bottom:10px;}
+  .rate-presets button{
+    flex:1; border:1px solid var(--border); background:var(--card); color:var(--text);
+    border-radius:8px; padding:8px 0; font-size:12px; cursor:pointer;
+  }
+  .rate-presets button.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;}
   input[type=range]{flex:1;}
 
   .hidden{display:none !important;}
@@ -201,9 +207,17 @@
           <button class="play-btn" id="btn-play">▶</button>
           <button class="skip-btn" id="btn-next" title="次の文へ">⏭</button>
         </div>
+        <div class="rate-presets" id="rate-presets">
+          <button type="button" data-rate="0.75">0.75x</button>
+          <button type="button" data-rate="1">1.0x</button>
+          <button type="button" data-rate="1.25">1.25x</button>
+          <button type="button" data-rate="1.5">1.5x</button>
+          <button type="button" data-rate="1.75">1.75x</button>
+          <button type="button" data-rate="2">2.0x</button>
+        </div>
         <div class="settings-row" style="margin-bottom:8px;">
           <span class="rate-label" id="rate-label">1.0x</span>
-          <input type="range" id="rate-range" min="0.5" max="2" step="0.1" value="1">
+          <input type="range" id="rate-range" min="0.5" max="2" step="0.05" value="1">
         </div>
         <div class="settings-row">
           <select id="voice-select"></select>
@@ -638,12 +652,39 @@
     if(isSpeaking) speakFrom(currentIndex);
   });
 
-  rateRange.value = settings.rate || 1;
-  rateLabel.textContent = (settings.rate || 1).toFixed(1) + "x";
-  rateRange.addEventListener("input", function(){
-    settings.rate = parseFloat(rateRange.value);
-    rateLabel.textContent = settings.rate.toFixed(1) + "x";
+  var ratePresets = document.getElementById("rate-presets");
+
+  function formatRate(r){
+    var s = r.toFixed(2);
+    if(s.charAt(s.length-1) === "0") s = s.slice(0,-1);
+    return s + "x";
+  }
+
+  function updateRateUI(){
+    var r = settings.rate || 1;
+    rateRange.value = r;
+    rateLabel.textContent = formatRate(r);
+    ratePresets.querySelectorAll("button").forEach(function(btn){
+      btn.classList.toggle("active", Math.abs(parseFloat(btn.dataset.rate) - r) < 0.001);
+    });
+  }
+
+  function setRate(newRate, restart){
+    settings.rate = newRate;
     persistSettings();
+    updateRateUI();
+    if(restart && isSpeaking) speakFrom(currentIndex);
+  }
+
+  ratePresets.addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-rate]");
+    if(!btn) return;
+    setRate(parseFloat(btn.dataset.rate), true);
+  });
+
+  updateRateUI();
+  rateRange.addEventListener("input", function(){
+    setRate(parseFloat(rateRange.value), false);
   });
   rateRange.addEventListener("change", function(){
     if(isSpeaking) speakFrom(currentIndex);
