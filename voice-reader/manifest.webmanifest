@@ -1,0 +1,11 @@
+{
+  "name": "読み上げリーダー",
+  "short_name": "読み上げ",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1c1c1e",
+  "orientation": "portrait",
+  "icons": []
+}

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>読み上げリーダー</title>
+<meta name="theme-color" content="#1c1c1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="読み上げ">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{
+    --bg:#f5f5f7;
+    --card:#ffffff;
+    --text:#1c1c1e;
+    --sub:#8a8a8e;
+    --accent:#0a84ff;
+    --danger:#ff3b30;
+    --border:#e5e5ea;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
+    overscroll-behavior:none;}
+  #app{max-width:600px; margin:0 auto; min-height:100%; display:flex; flex-direction:column;}
+
+  header.topbar{
+    position:sticky; top:0; z-index:10;
+    padding:calc(12px + var(--safe-top)) 16px 12px;
+    background:rgba(245,245,247,0.9); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+  }
+  header.topbar h1{font-size:17px; font-weight:600; margin:0; flex:1; text-align:center;}
+  .icon-btn{
+    width:34px; height:34px; border:none; background:none; color:var(--accent);
+    font-size:20px; display:flex; align-items:center; justify-content:center; border-radius:50%;
+    cursor:pointer;
+  }
+  .icon-btn:active{background:rgba(0,0,0,0.06);}
+
+  .view{display:none; flex:1; flex-direction:column; padding:16px 16px calc(24px + var(--safe-bottom));}
+  .view.active{display:flex;}
+
+  /* -------- List view -------- */
+  .empty-state{margin-top:40px; text-align:center; color:var(--sub); font-size:14px; line-height:1.8;}
+  .article-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;}
+  .article-card{
+    background:var(--card); border-radius:14px; padding:14px 16px;
+    display:flex; flex-direction:column; gap:6px; cursor:pointer;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .article-card:active{background:#f0f0f2;}
+  .article-title{font-size:15px; font-weight:600; line-height:1.4;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .article-meta{font-size:12px; color:var(--sub); display:flex; justify-content:space-between; align-items:center;}
+  .progress-track{height:4px; border-radius:2px; background:var(--border); overflow:hidden;}
+  .progress-fill{height:100%; background:var(--accent); border-radius:2px;}
+  .delete-btn{font-size:12px; color:var(--danger); background:none; border:none; padding:4px 0; align-self:flex-end;}
+
+  .fab{
+    position:fixed; right:calc(16px + (100vw - 600px) / 2); bottom:calc(24px + var(--safe-bottom));
+    width:56px; height:56px; border-radius:50%; background:var(--accent); color:#fff;
+    border:none; font-size:28px; box-shadow:0 4px 14px rgba(10,132,255,0.4); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; z-index:20;
+  }
+  @media (max-width:632px){ .fab{ right:16px; } }
+
+  /* -------- Add view -------- */
+  .segmented{display:flex; background:#e9e9eb; border-radius:9px; padding:2px; margin-bottom:16px;}
+  .segmented button{flex:1; border:none; background:none; padding:7px 0; font-size:13px; border-radius:7px; cursor:pointer; color:var(--text);}
+  .segmented button.active{background:#fff; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.15);}
+  label.field-label{font-size:12px; color:var(--sub); margin:14px 0 6px; display:block;}
+  input[type=text], input[type=url], textarea{
+    width:100%; border:1px solid var(--border); border-radius:10px; padding:12px;
+    font-size:15px; background:var(--card); font-family:inherit; color:var(--text);
+  }
+  textarea{min-height:220px; resize:vertical; line-height:1.6;}
+  .hint{font-size:12px; color:var(--sub); margin-top:8px; line-height:1.6;}
+  .primary-btn{
+    margin-top:20px; width:100%; padding:14px; border:none; border-radius:12px;
+    background:var(--accent); color:#fff; font-size:16px; font-weight:600; cursor:pointer;
+  }
+  .primary-btn:disabled{background:#b9b9bb; cursor:default;}
+  .secondary-btn{
+    margin-top:10px; width:100%; padding:12px; border:1px solid var(--border); border-radius:12px;
+    background:var(--card); color:var(--text); font-size:14px; cursor:pointer;
+  }
+  .status-msg{font-size:13px; margin-top:10px; line-height:1.6;}
+  .status-msg.error{color:var(--danger);}
+  .status-msg.ok{color:#248a3d;}
+
+  /* -------- Reader view -------- */
+  .reader-header{margin-bottom:10px;}
+  .reader-title{font-size:19px; font-weight:700; line-height:1.4; margin:4px 0 2px;}
+  .reader-source{font-size:12px; color:var(--sub); word-break:break-all;}
+  .reader-text{
+    flex:1; overflow-y:auto; background:var(--card); border-radius:14px; padding:18px;
+    font-size:16px; line-height:2; margin:14px 0; -webkit-overflow-scrolling:touch;
+  }
+  .chunk{cursor:pointer; border-radius:4px; padding:1px 2px;}
+  .chunk.speaking{background:#ffe58a;}
+  .controls-card{
+    background:var(--card); border-radius:16px; padding:14px 16px calc(14px + var(--safe-bottom)/2);
+    position:sticky; bottom:0;
+  }
+  .progress-row{display:flex; align-items:center; gap:10px; font-size:11px; color:var(--sub); margin-bottom:10px;}
+  .progress-row .progress-track{flex:1;}
+  .transport{display:flex; align-items:center; justify-content:center; gap:28px; margin-bottom:10px;}
+  .transport button{background:none; border:none; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center;}
+  .transport .play-btn{
+    width:60px; height:60px; border-radius:50%; background:var(--accent); color:#fff; font-size:22px;
+  }
+  .transport .skip-btn{font-size:26px; color:var(--accent); width:44px; height:44px;}
+  .settings-row{display:flex; gap:10px; align-items:center;}
+  .settings-row select{flex:1; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:13px; background:var(--card); color:var(--text);}
+  .rate-label{font-size:12px; color:var(--sub); white-space:nowrap; width:50px;}
+  input[type=range]{flex:1;}
+
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== List View ===== -->
+  <section id="view-list" class="view active">
+    <header class="topbar"><h1>読み上げリーダー</h1></header>
+    <div style="flex:1; padding-top:8px;">
+      <div id="empty-state" class="empty-state hidden">
+        まだ記事がありません。<br>右下の + から記事を追加してください。
+      </div>
+      <ul id="article-list" class="article-list"></ul>
+    </div>
+    <button class="fab" id="btn-add-open">+</button>
+  </section>
+
+  <!-- ===== Add View ===== -->
+  <section id="view-add" class="view">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-add-cancel">‹</button>
+      <h1>記事を追加</h1>
+      <span style="width:34px"></span>
+    </header>
+    <div>
+      <div class="segmented">
+        <button type="button" class="active" id="seg-paste">テキスト貼り付け</button>
+        <button type="button" id="seg-url">URLから取得</button>
+      </div>
+
+      <div id="pane-paste">
+        <label class="field-label">タイトル(空欄可)</label>
+        <input type="text" id="paste-title" placeholder="記事のタイトル">
+        <label class="field-label">本文</label>
+        <textarea id="paste-body" placeholder="ここに記事本文を貼り付けてください"></textarea>
+        <button class="primary-btn" id="btn-save-paste">この記事を追加</button>
+      </div>
+
+      <div id="pane-url" class="hidden">
+        <label class="field-label">記事のURL</label>
+        <input type="url" id="url-input" placeholder="https://example.com/article">
+        <button class="secondary-btn" id="btn-fetch-url">本文を取得する</button>
+        <p class="hint">サイトによっては本文を自動取得できない場合があります。うまく取得できない場合は「テキスト貼り付け」に本文をコピペしてください。</p>
+        <div id="url-status" class="status-msg"></div>
+        <div id="url-result" class="hidden">
+          <label class="field-label">タイトル</label>
+          <input type="text" id="url-title">
+          <label class="field-label">取得した本文(編集できます)</label>
+          <textarea id="url-body"></textarea>
+          <button class="primary-btn" id="btn-save-url">この記事を追加</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Reader View ===== -->
+  <section id="view-reader" class="view">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-reader-back">‹</button>
+      <h1 style="font-size:14px;">読み上げ</h1>
+      <button class="icon-btn" id="btn-reader-delete">🗑</button>
+    </header>
+    <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+      <div class="reader-header">
+        <div class="reader-title" id="reader-title"></div>
+        <div class="reader-source" id="reader-source"></div>
+      </div>
+      <div class="reader-text" id="reader-text"></div>
+      <div class="controls-card">
+        <div class="progress-row">
+          <span id="progress-current">0</span>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <span id="progress-total">0</span>
+        </div>
+        <div class="transport">
+          <button class="skip-btn" id="btn-prev" title="前の文へ">⏮</button>
+          <button class="play-btn" id="btn-play">▶</button>
+          <button class="skip-btn" id="btn-next" title="次の文へ">⏭</button>
+        </div>
+        <div class="settings-row" style="margin-bottom:8px;">
+          <span class="rate-label" id="rate-label">1.0x</span>
+          <input type="range" id="rate-range" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div class="settings-row">
+          <select id="voice-select"></select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- storage ---------- */
+  var STORAGE_ARTICLES = "vr_articles_v1";
+  var STORAGE_PROGRESS = "vr_progress_v1";
+  var STORAGE_SETTINGS = "vr_settings_v1";
+
+  function loadJSON(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    }catch(e){ return fallback; }
+  }
+  function saveJSON(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+  }
+
+  var articles = loadJSON(STORAGE_ARTICLES, []);   // [{id,title,source,text,addedAt}]
+  var progress = loadJSON(STORAGE_PROGRESS, {});   // {articleId: {chunkIndex, total, updatedAt}}
+  var settings = loadJSON(STORAGE_SETTINGS, {rate:1, voiceURI:null});
+
+  function persistArticles(){ saveJSON(STORAGE_ARTICLES, articles); }
+  function persistProgress(){ saveJSON(STORAGE_PROGRESS, progress); }
+  function persistSettings(){ saveJSON(STORAGE_SETTINGS, settings); }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  /* ---------- text chunking ---------- */
+  function splitIntoChunks(text){
+    var normalized = text.replace(/\r\n/g,"\n").trim();
+    // split on sentence-ending punctuation (Japanese/English) while keeping the punctuation
+    var raw = normalized.split(/(?<=[。！？!?])\s*|\n+/);
+    var chunks = [];
+    raw.forEach(function(s){
+      var t = s.trim();
+      if(!t) return;
+      // merge very short fragments into previous chunk to avoid choppy speech
+      if(chunks.length && t.length < 6 && !/[。！？!?]$/.test(chunks[chunks.length-1])){
+        chunks[chunks.length-1] += t;
+      } else {
+        chunks.push(t);
+      }
+    });
+    return chunks.length ? chunks : [normalized];
+  }
+
+  function isJapanese(text){
+    return /[぀-ヿ㐀-鿿]/.test(text);
+  }
+
+  /* ---------- view management ---------- */
+  var views = {
+    list: document.getElementById("view-list"),
+    add: document.getElementById("view-add"),
+    reader: document.getElementById("view-reader")
+  };
+  function showView(name){
+    Object.keys(views).forEach(function(k){ views[k].classList.toggle("active", k===name); });
+    if(name === "list") renderList();
+  }
+
+  /* ---------- list view ---------- */
+  var articleListEl = document.getElementById("article-list");
+  var emptyStateEl = document.getElementById("empty-state");
+
+  function renderList(){
+    articleListEl.innerHTML = "";
+    if(!articles.length){
+      emptyStateEl.classList.remove("hidden");
+      return;
+    }
+    emptyStateEl.classList.add("hidden");
+    articles.slice().reverse().forEach(function(article){
+      var li = document.createElement("li");
+      li.className = "article-card";
+      var p = progress[article.id];
+      var pct = 0;
+      var label = "未再生";
+      if(p && p.total){
+        pct = Math.min(100, Math.round((p.chunkIndex / p.total) * 100));
+        label = pct >= 100 ? "読了" : "続きから (" + pct + "%)";
+      }
+      li.innerHTML =
+        '<div class="article-title"></div>' +
+        '<div class="progress-track"><div class="progress-fill" style="width:'+pct+'%"></div></div>' +
+        '<div class="article-meta"><span class="meta-label"></span><span></span></div>';
+      li.querySelector(".article-title").textContent = article.title || "(無題の記事)";
+      li.querySelector(".meta-label").textContent = label;
+      li.addEventListener("click", function(){ openReader(article.id); });
+      articleListEl.appendChild(li);
+    });
+  }
+
+  document.getElementById("btn-add-open").addEventListener("click", function(){
+    resetAddView();
+    showView("add");
+  });
+  document.getElementById("btn-add-cancel").addEventListener("click", function(){ showView("list"); });
+
+  /* ---------- add view ---------- */
+  var segPaste = document.getElementById("seg-paste");
+  var segUrl = document.getElementById("seg-url");
+  var panePaste = document.getElementById("pane-paste");
+  var paneUrl = document.getElementById("pane-url");
+
+  segPaste.addEventListener("click", function(){
+    segPaste.classList.add("active"); segUrl.classList.remove("active");
+    panePaste.classList.remove("hidden"); paneUrl.classList.add("hidden");
+  });
+  segUrl.addEventListener("click", function(){
+    segUrl.classList.add("active"); segPaste.classList.remove("active");
+    paneUrl.classList.remove("hidden"); panePaste.classList.add("hidden");
+  });
+
+  function resetAddView(){
+    segPaste.click();
+    document.getElementById("paste-title").value = "";
+    document.getElementById("paste-body").value = "";
+    document.getElementById("url-input").value = "";
+    document.getElementById("url-status").textContent = "";
+    document.getElementById("url-status").className = "status-msg";
+    document.getElementById("url-result").classList.add("hidden");
+  }
+
+  function addArticle(title, text, source){
+    text = text.trim();
+    if(!text) return;
+    var firstLine = text.split(/\n/)[0].slice(0,40);
+    var article = {
+      id: uid(),
+      title: (title || "").trim() || firstLine || "(無題の記事)",
+      source: source || "",
+      text: text,
+      addedAt: Date.now()
+    };
+    articles.push(article);
+    persistArticles();
+    showView("list");
+    openReader(article.id);
+  }
+
+  document.getElementById("btn-save-paste").addEventListener("click", function(){
+    var title = document.getElementById("paste-title").value;
+    var body = document.getElementById("paste-body").value;
+    if(!body.trim()){ document.getElementById("paste-body").focus(); return; }
+    addArticle(title, body, "");
+  });
+
+  /* ---- URL fetch (best effort via public CORS proxy + simple readability) ---- */
+  document.getElementById("btn-fetch-url").addEventListener("click", function(){
+    var url = document.getElementById("url-input").value.trim();
+    var statusEl = document.getElementById("url-status");
+    var resultEl = document.getElementById("url-result");
+    resultEl.classList.add("hidden");
+    if(!url){ return; }
+    try{ new URL(url); }catch(e){
+      statusEl.className = "status-msg error";
+      statusEl.textContent = "正しいURLを入力してください。";
+      return;
+    }
+    statusEl.className = "status-msg";
+    statusEl.textContent = "取得中…";
+
+    var proxied = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function(){ controller.abort(); }, 12000);
+    fetch(proxied, {signal: controller.signal}).then(function(res){
+      clearTimeout(timeoutId);
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    }).then(function(html){
+      var extracted = extractArticle(html);
+      if(!extracted.text){
+        throw new Error("本文を検出できませんでした");
+      }
+      statusEl.className = "status-msg ok";
+      statusEl.textContent = "本文を取得しました。内容を確認して追加してください。";
+      document.getElementById("url-title").value = extracted.title;
+      document.getElementById("url-body").value = extracted.text;
+      resultEl.classList.remove("hidden");
+    }).catch(function(err){
+      clearTimeout(timeoutId);
+      statusEl.className = "status-msg error";
+      var reason = err.name === "AbortError" ? "タイムアウトしました" : err.message;
+      statusEl.textContent = "取得に失敗しました(" + reason + ")。「テキスト貼り付け」から本文をコピペしてください。";
+    });
+
+    function extractArticle(html){
+      var doc = new DOMParser().parseFromString(html, "text/html");
+      doc.querySelectorAll("script,style,nav,header,footer,aside,noscript,iframe,form").forEach(function(el){ el.remove(); });
+      var title = (doc.querySelector("h1") && doc.querySelector("h1").textContent.trim())
+        || (doc.querySelector("title") && doc.querySelector("title").textContent.trim())
+        || "";
+      var container = doc.querySelector("article") || doc.body;
+      var candidates = container.querySelectorAll("p");
+      var text = Array.prototype.map.call(candidates, function(p){ return p.textContent.trim(); })
+        .filter(function(t){ return t.length > 15; })
+        .join("\n");
+      if(!text && container){ text = container.textContent.trim().slice(0, 4000); }
+      return { title: title, text: text };
+    }
+
+    // set the article's source url for later reference
+    document.getElementById("btn-save-url").onclick = function(){
+      var t = document.getElementById("url-title").value;
+      var b = document.getElementById("url-body").value;
+      if(!b.trim()) return;
+      addArticle(t, b, url);
+    };
+  });
+
+  /* ---------- reader view / playback ---------- */
+  var currentArticle = null;
+  var currentChunks = [];
+  var currentIndex = 0;
+  var isSpeaking = false;
+  var isPaused = false;
+
+  var elReaderTitle = document.getElementById("reader-title");
+  var elReaderSource = document.getElementById("reader-source");
+  var elReaderText = document.getElementById("reader-text");
+  var elProgressFill = document.getElementById("progress-fill");
+  var elProgressCurrent = document.getElementById("progress-current");
+  var elProgressTotal = document.getElementById("progress-total");
+  var elPlayBtn = document.getElementById("btn-play");
+  var voiceSelect = document.getElementById("voice-select");
+  var rateRange = document.getElementById("rate-range");
+  var rateLabel = document.getElementById("rate-label");
+
+  function openReader(articleId){
+    var article = articles.find(function(a){ return a.id === articleId; });
+    if(!article) return;
+    stopSpeaking();
+    currentArticle = article;
+    currentChunks = splitIntoChunks(article.text);
+    var p = progress[article.id];
+    currentIndex = (p && p.chunkIndex < currentChunks.length) ? p.chunkIndex : 0;
+
+    elReaderTitle.textContent = article.title;
+    elReaderSource.textContent = article.source || "";
+    elReaderSource.style.display = article.source ? "block" : "none";
+
+    elReaderText.innerHTML = "";
+    currentChunks.forEach(function(chunk, i){
+      var span = document.createElement("span");
+      span.className = "chunk";
+      span.dataset.index = i;
+      span.textContent = chunk + " ";
+      span.addEventListener("click", function(){
+        currentIndex = i;
+        if(isSpeaking) speakFrom(currentIndex);
+        else highlightChunk(currentIndex);
+      });
+      elReaderText.appendChild(span);
+    });
+
+    updateProgressUI();
+    highlightChunk(currentIndex, false);
+    showView("reader");
+  }
+
+  function highlightChunk(index, scroll){
+    var nodes = elReaderText.querySelectorAll(".chunk");
+    nodes.forEach(function(n){ n.classList.remove("speaking"); });
+    var active = nodes[index];
+    if(active){
+      active.classList.add("speaking");
+      if(scroll !== false) active.scrollIntoView({block:"center", behavior:"smooth"});
+    }
+  }
+
+  function updateProgressUI(){
+    var total = currentChunks.length;
+    elProgressCurrent.textContent = Math.min(currentIndex, total);
+    elProgressTotal.textContent = total;
+    var pct = total ? Math.round((currentIndex/total)*100) : 0;
+    elProgressFill.style.width = pct + "%";
+  }
+
+  function saveProgress(){
+    if(!currentArticle) return;
+    progress[currentArticle.id] = {
+      chunkIndex: currentIndex,
+      total: currentChunks.length,
+      updatedAt: Date.now()
+    };
+    persistProgress();
+  }
+
+  /* ---- speech synthesis ---- */
+  var synth = window.speechSynthesis;
+
+  function pickVoice(){
+    var voices = synth.getVoices();
+    if(settings.voiceURI){
+      var found = voices.find(function(v){ return v.voiceURI === settings.voiceURI; });
+      if(found) return found;
+    }
+    if(currentArticle && isJapanese(currentArticle.text)){
+      var ja = voices.find(function(v){ return /ja/i.test(v.lang); });
+      if(ja) return ja;
+    }
+    return voices[0] || null;
+  }
+
+  function speakFrom(index){
+    synth.cancel();
+    if(index >= currentChunks.length){
+      isSpeaking = false;
+      elPlayBtn.textContent = "▶";
+      currentIndex = currentChunks.length;
+      highlightChunk(-1);
+      updateProgressUI();
+      saveProgress();
+      return;
+    }
+    currentIndex = index;
+    var utter = new SpeechSynthesisUtterance(currentChunks[index]);
+    var voice = pickVoice();
+    if(voice) utter.voice = voice;
+    utter.rate = settings.rate || 1;
+    utter.lang = voice ? voice.lang : (isJapanese(currentChunks[index]) ? "ja-JP" : "en-US");
+
+    utter.onstart = function(){
+      highlightChunk(index);
+      updateProgressUI();
+    };
+    utter.onend = function(){
+      if(!isSpeaking) return; // stopped/cancelled externally
+      saveProgress();
+      speakFrom(index + 1);
+    };
+    utter.onerror = function(){
+      isSpeaking = false;
+      elPlayBtn.textContent = "▶";
+    };
+
+    synth.speak(utter);
+    isSpeaking = true;
+    isPaused = false;
+    elPlayBtn.textContent = "❚❚";
+  }
+
+  function stopSpeaking(){
+    isSpeaking = false;
+    isPaused = false;
+    synth.cancel();
+    elPlayBtn.textContent = "▶";
+  }
+
+  document.getElementById("btn-play").addEventListener("click", function(){
+    if(isSpeaking && !isPaused){
+      synth.pause();
+      isPaused = true;
+      elPlayBtn.textContent = "▶";
+    } else if(isSpeaking && isPaused){
+      synth.resume();
+      isPaused = false;
+      elPlayBtn.textContent = "❚❚";
+    } else {
+      speakFrom(currentIndex);
+    }
+  });
+
+  document.getElementById("btn-prev").addEventListener("click", function(){
+    var wasSpeaking = isSpeaking;
+    var idx = Math.max(0, currentIndex - 1);
+    if(wasSpeaking) speakFrom(idx);
+    else { currentIndex = idx; highlightChunk(idx); updateProgressUI(); saveProgress(); }
+  });
+  document.getElementById("btn-next").addEventListener("click", function(){
+    var wasSpeaking = isSpeaking;
+    var idx = Math.min(currentChunks.length - 1, currentIndex + 1);
+    if(wasSpeaking) speakFrom(idx);
+    else { currentIndex = idx; highlightChunk(idx); updateProgressUI(); saveProgress(); }
+  });
+
+  document.getElementById("btn-reader-back").addEventListener("click", function(){
+    if(isSpeaking) saveProgress();
+    stopSpeaking();
+    showView("list");
+  });
+
+  document.getElementById("btn-reader-delete").addEventListener("click", function(){
+    if(!currentArticle) return;
+    if(!confirm("この記事を削除しますか?")) return;
+    stopSpeaking();
+    var id = currentArticle.id;
+    articles = articles.filter(function(a){ return a.id !== id; });
+    delete progress[id];
+    persistArticles();
+    persistProgress();
+    showView("list");
+  });
+
+  window.addEventListener("beforeunload", function(){ if(isSpeaking) saveProgress(); });
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden && isSpeaking) saveProgress();
+  });
+
+  /* ---- voice / rate settings ---- */
+  function populateVoices(){
+    var voices = synth.getVoices();
+    voiceSelect.innerHTML = "";
+    voices.forEach(function(v){
+      var opt = document.createElement("option");
+      opt.value = v.voiceURI;
+      opt.textContent = v.name + " (" + v.lang + ")";
+      voiceSelect.appendChild(opt);
+    });
+    if(settings.voiceURI) voiceSelect.value = settings.voiceURI;
+  }
+  if(typeof synth !== "undefined"){
+    populateVoices();
+    synth.addEventListener("voiceschanged", populateVoices);
+  }
+  voiceSelect.addEventListener("change", function(){
+    settings.voiceURI = voiceSelect.value;
+    persistSettings();
+    if(isSpeaking) speakFrom(currentIndex);
+  });
+
+  rateRange.value = settings.rate || 1;
+  rateLabel.textContent = (settings.rate || 1).toFixed(1) + "x";
+  rateRange.addEventListener("input", function(){
+    settings.rate = parseFloat(rateRange.value);
+    rateLabel.textContent = settings.rate.toFixed(1) + "x";
+    persistSettings();
+  });
+  rateRange.addEventListener("change", function(){
+    if(isSpeaking) speakFrom(currentIndex);
+  });
+
+  /* ---------- PWA service worker ---------- */
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+
+  renderList();
+})();
+</script>
+</body>
+</html>
