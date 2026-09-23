@@ -700,7 +700,7 @@
 
   /* ---- high quality voice: audio made by Google Cloud TTS via a relay, keeps playing while locked ---- */
   // URL of the Cloudflare Worker that relays to Google Cloud Text-to-Speech (see cloudflare-worker.js)
-  var DEFAULT_TTS_ENDPOINT = "";
+  var DEFAULT_TTS_ENDPOINT = "https://nameless-rice-bb65.a0448yoshiya.workers.dev";
   var TTS_ENDPOINT = DEFAULT_TTS_ENDPOINT;
   try{ TTS_ENDPOINT = localStorage.getItem("vr_tts_endpoint") || DEFAULT_TTS_ENDPOINT; }catch(e){}
 
