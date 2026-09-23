@@ -535,10 +535,26 @@
     return voices[0] || null;
   }
 
+  // keep the screen from auto-locking while reading (iOS stops speech when locked)
+  var wakeLock = null;
+  function requestWakeLock(){
+    if(wakeLock || !("wakeLock" in navigator)) return;
+    navigator.wakeLock.request("screen").then(function(lock){
+      wakeLock = lock;
+      lock.addEventListener("release", function(){ wakeLock = null; });
+    }).catch(function(){});
+  }
+  function releaseWakeLock(){
+    if(!wakeLock) return;
+    wakeLock.release().catch(function(){});
+    wakeLock = null;
+  }
+
   function speakFrom(index){
     synth.cancel();
     if(index >= currentChunks.length){
       isSpeaking = false;
+      releaseWakeLock();
       elPlayBtn.textContent = "▶";
       currentIndex = currentChunks.length;
       highlightChunk(-1);
@@ -564,12 +580,14 @@
     };
     utter.onerror = function(){
       isSpeaking = false;
+      releaseWakeLock();
       elPlayBtn.textContent = "▶";
     };
 
     synth.speak(utter);
     isSpeaking = true;
     isPaused = false;
+    requestWakeLock();
     elPlayBtn.textContent = "❚❚";
   }
 
@@ -577,6 +595,7 @@
     isSpeaking = false;
     isPaused = false;
     synth.cancel();
+    releaseWakeLock();
     elPlayBtn.textContent = "▶";
   }
 
@@ -584,10 +603,12 @@
     if(isSpeaking && !isPaused){
       synth.pause();
       isPaused = true;
+      releaseWakeLock();
       elPlayBtn.textContent = "▶";
     } else if(isSpeaking && isPaused){
       synth.resume();
       isPaused = false;
+      requestWakeLock();
       elPlayBtn.textContent = "❚❚";
     } else {
       speakFrom(currentIndex);
@@ -628,6 +649,8 @@
   window.addEventListener("beforeunload", function(){ if(isSpeaking) saveProgress(); });
   document.addEventListener("visibilitychange", function(){
     if(document.hidden && isSpeaking) saveProgress();
+    // the browser drops the wake lock when the page is hidden; take it back on return
+    if(!document.hidden && isSpeaking && !isPaused) requestWakeLock();
   });
 
   /* ---- voice / rate settings ---- */
